@@ -6,7 +6,7 @@ from firestore_utils import fetch_medication_names, fetch_medication_info, uploa
 import os
 import uuid
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "C:/Users/pc/Desktop/cloud_project/key.json" # to replace with your own key
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "path-to-your-key-format-json" # to replace with your own key
 
 # Function to process the image
 def process_image(image):
