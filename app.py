@@ -2,7 +2,11 @@ import streamlit as st
 from PIL import Image
 import io
 from ocr import perform_ocr
-from firestore_utils import fetch_medication_names, fetch_medication_info, upload_to_bucket
+from firestore_utils import fetch_medication_names, fetch_medication_info, upload_to_bucket, translate_text
+import os
+import uuid
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "C:/Users/pc/Desktop/cloud_project/key.json" # to replace with your own key
 
 # Function to process the image
 def process_image(image):
@@ -11,12 +15,20 @@ def process_image(image):
     # Save the image temporarily to process it
     image_path = "temp_image.jpg"
     image.save(image_path)
+    print(f"Image saved at {image_path}")  # Log the saved image path
 
     # Upload the image to the Google Cloud Storage bucket
     bucket_name = "temp-prescriptions-bucket"  # Replace with your bucket name
-    destination_blob_name = f"uploaded_images/{image.filename}"  # Adjust folder structure if needed
+    destination_blob_name = f"uploaded_images/{uuid.uuid4()}.jpg"  # Adjust folder structure if needed
     progress.progress(25)  # Update to 25%
-    upload_to_bucket(bucket_name, image_path, destination_blob_name)
+    try:
+        print(f"Uploading to bucket {bucket_name} as {destination_blob_name}")
+        upload_to_bucket(bucket_name, image_path, destination_blob_name)
+        print("Upload completed successfully!")
+    except Exception as e:
+        print(f"Upload failed: {e}")
+        st.error("Failed to upload the image to Google Cloud Storage.")
+        return {}
 
     # Perform OCR to extract text
     progress.progress(50)  # Update to 50%
@@ -52,7 +64,6 @@ def process_image(image):
 
     return medication_info
 
-    
 
 # Streamlit interface
 st.title("💊 Prescription Image Processing 📷")
@@ -61,9 +72,21 @@ st.markdown("Upload a prescription image to extract medication details.")
 # File uploader
 uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png", "pdf"])
 
+# Translation Options in Sidebar
+st.sidebar.markdown("### Translation Options 🌐")
+language_mapping = {
+    "French": "fr",
+    "Spanish": "es",
+    "German": "de",
+    "Chinese": "zh",
+    "Arabic": "ar",
+    "Hindi": "hi"
+}
+selected_language = st.sidebar.selectbox("Choose a language for translation:", options=list(language_mapping.keys()))
+
 if uploaded_file:
     image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+    st.image(image, caption="Uploaded Image", width=175)
     
     if st.button("Submit 🚀"):
         with st.spinner("Processing image... ⏳"):
@@ -73,9 +96,21 @@ if uploaded_file:
                     st.success("Image processed successfully! ✅")
                     for medication, info in medication_info.items():
                         st.subheader(f"Details for {medication}")
-                        st.write(f"**Dosage**: {info.get('dosage', 'N/A')}")
-                        st.write(f"**Conditions**: {', '.join(info.get('conditions', []))}")
-                        st.write(f"**Side Effects**: {', '.join(info.get('side_effects', []))}")
+                        
+                        # Translate each field if a language is selected
+                        dosage = info.get('dosage', 'N/A')
+                        conditions = ', '.join(info.get('conditions', []))
+                        side_effects = ', '.join(info.get('side_effects', []))
+
+                        # Apply translation to each field if a language is selected
+                        if selected_language:
+                            dosage = translate_text(dosage, language_mapping[selected_language])
+                            conditions = translate_text(conditions, language_mapping[selected_language])
+                            side_effects = translate_text(side_effects, language_mapping[selected_language])
+
+                        st.write(f"**Dosage**: {dosage}")
+                        st.write(f"**Conditions**: {conditions}")
+                        st.write(f"**Side Effects**: {side_effects}")
                 else:
                     st.error("No medications found in the image.")
             except Exception as e:
