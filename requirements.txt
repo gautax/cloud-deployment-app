@@ -3,3 +3,4 @@ Pillow
 google-cloud-vision
 google-cloud-firestore
 rapidfuzz
+google-cloud-translate
