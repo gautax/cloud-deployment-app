@@ -1,5 +1,7 @@
 from google.cloud import firestore
 from google.cloud import storage
+from google.cloud import translate_v2 as translate
+
 
 def fetch_medication_names():
     """
@@ -24,15 +26,31 @@ def fetch_medication_info(medication_name):
 
 def upload_to_bucket(bucket_name, source_file_name, destination_blob_name):
     """
-    Uploads a file to a Google Cloud Storage bucket.
-    :param bucket_name: Name of the bucket.
-    :param source_file_name: Local path to the file.
-    :param destination_blob_name: The name of the object in the bucket.
+    Uploads a file to the specified Google Cloud Storage bucket.
     """
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(destination_blob_name)
+    try:
+        # Initialize the Google Cloud Storage client
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(destination_blob_name)
 
-    blob.upload_from_filename(source_file_name)
+        # Upload the file
+        blob.upload_from_filename(source_file_name)
+        print(f"File {source_file_name} uploaded to {destination_blob_name} in bucket {bucket_name}.")
+    except Exception as e:
+        print(f"An error occurred while uploading to bucket: {e}")
+        raise
+def translate_text(text, target_language):
+    """
+    Translates text into the target language.
+    """
+    try:
+        # Initialize the Translation client
+        translate_client = translate.Client()
 
-    print(f"File {source_file_name} uploaded to {destination_blob_name}.")
+        # Perform translation
+        result = translate_client.translate(text, target_language=target_language)
+        return result['translatedText']
+    except Exception as e:
+        print(f"An error occurred during translation: {e}")
+        raise
