@@ -5,8 +5,39 @@ from ocr import perform_ocr
 from firestore_utils import fetch_medication_names, fetch_medication_info, upload_to_bucket, translate_text
 import os
 import uuid
+from google.cloud import secretmanager
+import json
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "path-to-your-key-format-json" # to replace with your own key
+# Function to fetch and set Google Cloud credentials from Secret Manager
+def set_google_credentials_from_secret(secret_id, project_id):
+    """
+    Fetches the service account key from Google Secret Manager and sets it as GOOGLE_APPLICATION_CREDENTIALS.
+    """
+    # Create the Secret Manager client
+    client = secretmanager.SecretManagerServiceClient()
+
+    # Build the resource name of the secret
+    secret_name = f"projects/{project_id}/secrets/{secret_id}/versions/latest"
+
+    # Access the secret
+    response = client.access_secret_version(request={"name": secret_name})
+    secret_payload = response.payload.data.decode("UTF-8")
+    return secret_payload
+
+    # Save the key.json content to a temporary file
+    temp_key_path = "temp_key.json"
+    with open(temp_key_path, "w") as key_file:
+        key_file.write(secret_payload)
+    
+    # Set GOOGLE_APPLICATION_CREDENTIALS environment variable to the temporary file
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = temp_key_path
+
+# Replace these with your project ID and secret name
+PROJECT_ID = "civic-radio-443515-c6"  # actual Google Cloud project ID
+SECRET_ID = "service-account-key1"  # name of the secret in Secret Manager
+
+# Call the function to set credentials from Secret Manager
+set_google_credentials_from_secret(SECRET_ID, PROJECT_ID)
 
 # Function to process the image
 def process_image(image):
@@ -117,3 +148,5 @@ if uploaded_file:
                 st.error(f"An error occurred: {e}")
 else:
     st.info("Please upload an image to get started.")
+
+
