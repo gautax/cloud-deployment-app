@@ -1,6 +1,8 @@
 streamlit
 Pillow
+google-cloud-storage
 google-cloud-vision
 google-cloud-firestore
 rapidfuzz
 google-cloud-translate
+google-cloud-secret-manager
